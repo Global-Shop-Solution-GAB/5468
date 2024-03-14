@@ -1,0 +1,148 @@
+Program.Sub.ScreenSU.Start
+Gui.frmWIPFG..Create
+Gui.frmWIPFG..Caption("WIP to FG Multiple Jobs")
+Gui.frmWIPFG..Size(9450,7905)
+Gui.frmWIPFG..MinX(0)
+Gui.frmWIPFG..MinY(0)
+Gui.frmWIPFG..Position(0,0)
+Gui.frmWIPFG..BackColor(-2147483633)
+Gui.frmWIPFG..MousePointer(0)
+Gui.frmWIPFG..Event(UnLoad,frmWIPFG_UnLoad)
+Gui.frmWIPFG.txtFromJob.Create(TextBox,"",True,1230,300,0,195,495,False,0,"Arial",8,-2147483643,1)
+Gui.frmWIPFG.txtFromSuffix.Create(TextBox,"",True,510,300,0,1500,495,False,0,"Arial",8,-2147483643,1)
+Gui.frmWIPFG.lbl1.Create(Label,"From Job:",True,1200,255,0,150,225,True,0,"Arial",8,-2147483633,0)
+Gui.frmWIPFG.txtToJob.Create(TextBox,"",True,1215,300,0,3150,495,False,0,"Arial",8,-2147483643,1)
+Gui.frmWIPFG.txtToSuffix.Create(TextBox,"",True,495,300,0,4425,495,False,0,"Arial",8,-2147483643,1)
+Gui.frmWIPFG.cmdFrom.Create(Button)
+Gui.frmWIPFG.cmdFrom.Size(525,375)
+Gui.frmWIPFG.cmdFrom.Position(2055,450)
+Gui.frmWIPFG.cmdFrom.Caption("^")
+Gui.frmWIPFG.cmdFrom.Event(Click,cmdFrom_Click)
+Gui.frmWIPFG.cmdTo.Create(Button)
+Gui.frmWIPFG.cmdTo.Size(525,375)
+Gui.frmWIPFG.cmdTo.Position(4995,465)
+Gui.frmWIPFG.cmdTo.Caption("^")
+Gui.frmWIPFG.cmdTo.Event(Click,cmdTo_Click)
+Gui.frmWIPFG.lbl2.Create(Label,"To Job:",True,1200,255,0,3150,240,True,0,"Arial",8,-2147483633,0)
+Gui.frmWIPFG.gsgcJobs.Create(GsGridControl)
+Gui.frmWIPFG.gsgcJobs.Size(9000,5895)
+Gui.frmWIPFG.gsgcJobs.Position(135,990)
+Gui.frmWIPFG.cmdWIPFG.Create(Button)
+Gui.frmWIPFG.cmdWIPFG.Size(1515,375)
+Gui.frmWIPFG.cmdWIPFG.Position(150,6930)
+Gui.frmWIPFG.cmdWIPFG.Caption("WIP to FG")
+Gui.frmWIPFG.cmdWIPFG.Event(Click,cmdWIPFG_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.External.Include.Library("2003.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.ODBC.Connection!CON.OPENCONNECTION(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+GUI.frmWIPFG.gsgcJobs.Anchor(15)
+gui.frmWIPFG.cmdWIPFG.anchor(6)
+GUI.frmWIPFG..Show
+Program.Sub.Main.End
+
+Program.Sub.loadTable.Start
+v.Local.ssql.Declare
+f.Intrinsic.Control.If(v.DataTable.dtWIP.Exists)
+	f.Data.DataTable.Close("dtWIP")
+f.Intrinsic.Control.EndIf
+f.Intrinsic.String.Build("SELECT JOB, SUFFIX, PART, DESCRIPTION, QTY_ORDER from V_JOB_HEADER WHERE ((JOB>='{0}' and suffix>='{1}') AND (JOB<='{2}' and suffix<='{3}')) AND DATE_CLOSED='1900-01-01'",v.Screen.frmWIPFG!txtFromJob.text,v.Screen.frmWIPFG!txtFromSuffix.text,v.Screen.frmWIPFG!txtToJob.text,v.Screen.frmWIPFG!txtToSuffix.text,v.Local.sSQL)
+f.Data.DataTable.CreateFromSQL("dtWIP","con",v.Local.ssql,true)
+f.Data.DataTable.AddColumn("dtWIP","Select","Boolean",true)
+gui.frmWIPFG.gsgcJobs.DataSource("dtWIP")
+GUI.frmWIPFG.gsgcJobs.AddGridviewFromDatatable("gvWIP","dtWIP")
+GUI.frmWIPFG.gsgcJobs.SetColumnProperty("gvWIP","Select","ReadOnly","False")
+GUI.frmWIPFG.gsgcJobs.SetColumnProperty("gvWIP","Select","AllowEdit","True")
+Program.Sub.loadTable.End
+
+Program.Sub.cmdFrom_Click.Start
+V.Local.sError.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sTitles.Declare(String)
+V.Local.sWidths.Declare(String)
+V.Local.sPart.Declare(String)
+V.Local.sRev.Declare(String)
+V.Local.sPartRev.Declare(String)
+v.Local.sToSuffix.Declare(string)
+
+'Override GSQL browsers with GAB browser.  GAB browser is customer specific.
+V.Local.scc.Declare(String)
+F.Intrinsic.String.Split("Job*!*Suffix*!*Part*!*Description","*!*",V.Local.sTitles)
+F.Intrinsic.String.Split("1900*!*900*!*2000*!*3200","*!*",V.Local.sWidths)
+F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+F.Intrinsic.String.Concat("SELECT JOB, SUFFIX, PART, DESCRIPTION FROM V_JOB_HEADER order by job, suffix","",V.Local.sSQL)
+F.Intrinsic.UI.Browser("Select a Job ","con",V.Local.sSQL,V.Local.sTitles,V.Local.sWidths,15000,10000,V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet,<>,"***CANCEL***")
+	f.Intrinsic.String.Split(v.Local.sRet,"*!*",v.Local.sRet)
+	gui.frmWIPFG.txtFromJob.Text(V.Local.sRet(0).Trim)
+	gui.frmWIPFG.txtFromSuffix.Text(V.Local.sRet(1).Trim)
+	
+	F.Intrinsic.String.Concat("SELECT MAX(SUFFIX) FROM V_JOB_HEADER WHERE JOB='",v.Local.sRet(0).trim,"'",V.Local.sSQL)
+	f.ODBC.Connection!CON.executeandreturn(v.Local.sSQL,v.Local.sToSuffix)
+
+	gui.frmWIPFG.txtToJob.Text(V.Local.sRet(0).Trim)
+	gui.frmWIPFG.txtToSuffix.Text(v.Local.sToSuffix)
+	F.Intrinsic.Control.CallSub(loadTable)
+F.Intrinsic.Control.EndIf
+Program.Sub.cmdFrom_Click.End
+
+Program.Sub.cmdTo_Click.Start
+V.Local.sError.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.sTitles.Declare(String)
+V.Local.sWidths.Declare(String)
+V.Local.sPart.Declare(String)
+V.Local.sRev.Declare(String)
+V.Local.sPartRev.Declare(String)
+
+'Override GSQL browsers with GAB browser.  GAB browser is customer specific.
+V.Local.scc.Declare(String)
+F.Intrinsic.String.Split("Job*!*Suffix*!*Part*!*Description","*!*",V.Local.sTitles)
+F.Intrinsic.String.Split("1900*!*900*!*2000*!*3200","*!*",V.Local.sWidths)
+F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+F.Intrinsic.String.Concat("SELECT JOB, SUFFIX, PART, DESCRIPTION FROM V_JOB_HEADER order by job, suffix","",V.Local.sSQL)
+F.Intrinsic.UI.Browser("Select a Job ","con",V.Local.sSQL,V.Local.sTitles,V.Local.sWidths,15000,10000,V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet,<>,"***CANCEL***")
+	f.Intrinsic.String.Split(v.Local.sRet,"*!*",v.Local.sRet)
+	gui.frmWIPFG.txtToJob.Text(V.Local.sRet(0).Trim)
+	gui.frmWIPFG.txtToSuffix.Text(V.Local.sRet(1).Trim)
+	F.Intrinsic.Control.CallSub(loadTable)
+F.Intrinsic.Control.EndIf
+Program.Sub.cmdTo_Click.End
+
+Program.Sub.cmdWIPFG_Click.Start
+gui.frmWIPFG.gsgcJobs.SuspendLayout
+f.Intrinsic.UI.InvokeWaitDialog("Processing Transactions...")
+V.Local.i.Declare(long)
+f.Intrinsic.Control.For(v.Local.i,0,v.DataTable.dtWIP.RowCount--,1)
+	f.Intrinsic.Control.If(v.DataTable.dtWIP(v.Local.i).SELECT!FIELDVAL)
+		f.Data.DataTable.AddRow("2003","WONum",v.DataTable.dtWIP(v.Local.i).JOB!FIELDVALTRIM,"WOSuffix",V.DataTable.dtWIP(v.Local.i).SUFFIX!FIELDVALTRIM,"Quantity",V.DataTable.dtWIP(v.Local.i).QTY_ORDER!FIELDVAL,"CloseWO","Y")
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Next(v.Local.i)
+f.Intrinsic.Control.CallSub(2003Sync)
+f.Intrinsic.UI.CloseWaitDialog
+f.Intrinsic.Control.CallSub(frmWIPFG_Unload)
+Program.Sub.cmdWIPFG_Click.End
+
+Program.Sub.frmWIPFG_UnLoad.Start
+F.ODBC.Connection!CON.Close
+F.Intrinsic.Control.End
+Program.Sub.frmWIPFG_UnLoad.End
+
+
+
+
+
+
+
+
+
+
+
+
